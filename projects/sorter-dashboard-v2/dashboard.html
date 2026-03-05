@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SORTER</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --coral: #ff6b6b;
+  --coral-dark: #ee5a5a;
+  --coral-glow: rgba(255, 107, 107, 0.3);
+  --text: #fff;
+  --text-dim: rgba(255,255,255,0.5);
+  --text-muted: rgba(255,255,255,0.35);
+}
+* {box-sizing:border-box;margin:0;padding:0}
+body {font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.container {max-width:400px;margin:0 auto;padding:20px}
+
+/* Header */
+.header {text-align:center;padding:16px 0 20px;position:relative}
+.header h1 {font-size:14px;font-weight:500;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase}
+.running-indicator {position:absolute;top:16px;right:0;display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:20px;font-size:10px;color:#10b981}
+.running-indicator.stopped {background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1);color:var(--text-dim)}
+.running-dot {width:6px;height:6px;background:#10b981;border-radius:50%;animation:blink 1s infinite}
+.running-indicator.stopped .running-dot {background:#666;animation:none}
+@keyframes blink {0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* Arc */
+.arc-svg {width:180px;height:100px;margin:0 auto 20px;display:block}
+.arc-bg{fill:none;stroke:rgba(255,255,255,0.1);stroke-width:10}
+.arc-fill{fill:none;stroke:var(--coral);stroke-width:10;stroke-linecap:round;stroke-dasharray:226;stroke-dashoffset:226;transition:stroke-dashoffset 1s ease;filter:drop-shadow(0 0 10px var(--coral-glow))}
+.arc-text{text-anchor:middle}
+.arc-percent{font-size:38px;font-weight:700;fill:var(--text)}
+.arc-label{font-size:10px;font-weight:500;fill:var(--text-dim);letter-spacing:2px}
+
+/* Timeline */
+.timeline {display:flex;justify-content:space-between;align-items:center;margin:16px 10px;position:relative;padding:0 5px}
+.timeline-line {position:absolute;top:15px;left:30px;right:30px;height:2px;background:rgba(255,255,255,0.15);z-index:0}
+.node {display:flex;flex-direction:column;align-items:center;flex:1;position:relative;z-index:1}
+.node-circle {width:30px;height:30px;border-radius:50%;background:var(--surface);border:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;transition:all 0.3s}
+.node.done .node-circle {background:var(--coral);border-color:var(--coral)}
+.node.active .node-circle {border-color:var(--coral);box-shadow:0 0 15px var(--coral-glow);animation:pulse 2s infinite}
+@keyframes pulse {0%,100%{box-shadow:0 0 15px var(--coral-glow)}50%{box-shadow:0 0 25px var(--coral-glow)}}
+.node-label {margin-top:6px;font-size:7px;font-weight:500;color:var(--text-muted);letter-spacing:0.5px}
+.node.done .node-label,.node.active .node-label {color:var(--text)}
+
+/* Stats */
+.stats {display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-card {background:var(--surface);border-radius:16px;padding:16px;text-align:center}
+.stat-value {font-size:32px;font-weight:700}
+.stat-label {font-size:9px;font-weight:500;color:var(--text-dim);letter-spacing:1px;margin-top:4px}
+.stat-card:first-child .stat-value {color:var(--text)}
+.stat-card:last-child .stat-value {color:var(--coral)}
+
+/* Current */
+.current-file {background:linear-gradient(145deg,rgba(255,107,107,0.1),rgba(255,107,107,0.02));border:1px solid rgba(255,107,107,0.2);border-radius:16px;padding:14px;margin-bottom:16px;text-align:center}
+.cf-label {font-size:9px;font-weight:600;color:var(--coral);letter-spacing:2px;margin-bottom:6px}
+.cf-name {font-size:13px;font-weight:600;word-break:break-all}
+.cf-details {font-size:11px;color:var(--text-dim);margin-top:4px}
+
+/* Map Button */
+.map-btn {width:100%;padding:14px;background:linear-gradient(145deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.12);border-radius:16px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all 0.3s;color:var(--text);font-family:inherit;font-size:13px;font-weight:500}
+.map-btn:hover {background:linear-gradient(145deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04));border-color:var(--coral)}
+
+/* Map Modal */
+.map-modal {position:fixed;inset:0;background:rgba(10,10,26,0.95);z-index:100;display:none;flex-direction:column}
+.map-modal.active {display:flex}
+.map-modal-content {flex:1;display:flex;flex-direction:column;padding:16px}
+.map-modal-header {display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.map-modal-header h2 {font-size:18px;font-weight:600}
+.close-map-btn {background:var(--surface);border:1px solid rgba(255,255,255,0.12);color:var(--text);padding:10px 16px;border-radius:12px;cursor:pointer;font-family:inherit;font-size:14px}
+#map {flex:1;border-radius:16px;min-height:300px}
+
+/* Photo Popup */
+.photo-popup {position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.photo-popup.active {display:flex}
+.photo-popup-content {background:var(--surface);border-radius:20px;padding:20px;max-width:320px;width:100%;position:relative;text-align:center}
+.photo-popup-close {position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.5);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px}
+.photo-popup-img {width:100%;height:180px;background:#000;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.photo-popup-img img {max-width:100%;max-height:180px;object-fit:contain}
+.photo-no-img {font-size:40px;opacity:0.3}
+.photo-name {font-size:13px;font-weight:600;word-break:break-all;margin-bottom:6px}
+.photo-meta {font-size:10px;color:var(--text-dim);margin-bottom:3px}
+.photo-popup-link {display:inline-block;margin-top:12px;padding:10px 20px;background:var(--coral);color:#fff;text-decoration:none;border-radius:10px;font-size:12px;font-weight:500}
+.spacer {height:20px}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>PHOTO SORTER</h1>
+<div class="running-indicator stopped" id="runningIndicator"><span class="running-dot"></span><span id="runningText">STOPPED</span></div>
+</div>
+
+<svg class="arc-svg" viewBox="0 0 180 100">
+<path class="arc-bg" d="M 15 85 A 75 75 0 0 1 165 85"/>
+<path class="arc-fill" id="arcFill" d="M 15 85 A 75 75 0 0 1 165 85"/>
+<text class="arc-text" x="90" y="70"><tspan class="arc-percent" id="arcPercent">0%</tspan></text>
+<text class="arc-text" x="90" y="88"><tspan class="arc-label">OVERALL</tspan></text>
+</svg>
+
+<div class="timeline" id="timeline">
+<div class="timeline-line"></div>
+<div class="node" data-phase="discovery"><div class="node-circle">1</div><div class="node-label">SCAN</div></div>
+<div class="node" data-phase="extract"><div class="node-circle">2</div><div class="node-label">EXIF</div></div>
+<div class="node" data-phase="geocode"><div class="node-circle">3</div><div class="node-label">GPS</div></div>
+<div class="node" data-phase="sort"><div class="node-circle">4</div><div class="node-label">SORT</div></div>
+<div class="node" data-phase="validate"><div class="node-circle">5</div><div class="node-label">CHECK</div></div>
+<div class="node" data-phase="done"><div class="node-circle">6</div><div class="node-label">DONE</div></div>
+</div>
+
+<div class="stats">
+<div class="stat-card"><div class="stat-value" id="statTotal">0</div><div class="stat-label">TOTAL</div></div>
+<div class="stat-card"><div class="stat-value" id="statProcessed">0</div><div class="stat-label">PROCESSED</div></div>
+</div>
+
+<div class="current-file">
+<div class="cf-label">NOW PROCESSING</div>
+<div class="cf-name" id="currentFileName">---</div>
+<div class="cf-details" id="currentFileDetails">Waiting...</div>
+</div>
+
+<button class="map-btn" onclick="openMap()"><span>🗺️</span><span>View GPS Map</span></button>
+<div class="spacer"></div>
+</div>
+
+<div class="map-modal" id="mapModal">
+<div class="map-modal-content">
+<div class="map-modal-header"><h2>📍 Photo Locations</h2><button class="close-map-btn" onclick="closeMap()">✕</button></div>
+<div id="map"></div>
+</div>
+</div>
+
+<div class="photo-popup" id="photoPopup">
+<div class="photo-popup-content">
+<button class="photo-popup-close" onclick="closePhotoPopup()">✕</button>
+<div class="photo-popup-img" id="photoImg"></div>
+<div class="photo-popup-info" id="photoInfo"></div>
+<a class="photo-popup-link" id="photoLink" target="_blank">Open in Drive</a>
+</div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const API = "http://100.113.147.82:8091";
+let map = null;
+let mapInitialized = false;
+
+function init() { refresh(); setInterval(refresh, 3000); }
+
+function openMap() {
+  document.getElementById('mapModal').classList.add('active');
+  if (!mapInitialized) {
+    mapInitialized = true;
+    map = L.map('map', {center:[60.229556,24.607028], zoom:6, zoomControl:true});
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',{attribution:''}).addTo(map);
+    L.circle([60.229556,24.607028],{radius:10000,color:'#ff6b6b',fillColor:'#ff6b6b',fillOpacity:0.15}).addTo(map);
+    L.circle([60.229556,24.607028],{radius:30000,color:'#ff6b6b',fillColor:'#ff6b6b',fillOpacity:0.08}).addTo(map);
+  }
+  setTimeout(()=>map.invalidateSize(),100);
+}
+function closeMap() { document.getElementById('mapModal').classList.remove('active'); }
+
+async function refresh() {
+  try {
+    const status = await fetch(API + '/api/v1/status').then(r=>r.json());
+    
+    // Running
+    const isRunning = status.completed_at === null && status.phase !== 'done';
+    const indicator = document.getElementById('runningIndicator');
+    const runningText = document.getElementById('runningText');
+    if (isRunning) { indicator.classList.remove('stopped'); runningText.textContent = 'RUNNING'; }
+    else { indicator.classList.add('stopped'); runningText.textContent = 'STOPPED'; }
+    
+    // Current file
+    try {
+      const current = await fetch(API + '/api/v1/current').then(r=>r.json());
+      const cfName = document.getElementById('currentFileName');
+      const cfDetails = document.getElementById('currentFileDetails');
+      if (current.current_file) { cfName.textContent = current.current_file; cfDetails.textContent = status.phase?.toUpperCase() || 'Processing...'; }
+      else if (isRunning) { cfName.textContent = 'Extracting EXIF...'; cfDetails.textContent = (current.recent_logs?.[0] || 'Working...').substring(0,50); }
+      else { cfName.textContent = '---'; cfDetails.textContent = 'Idle'; }
+    } catch(e) { document.getElementById('currentFileName').textContent = '---'; document.getElementById('currentFileDetails').textContent = 'Idle'; }
+    
+    // Stats - use API values directly
+    const total = status.files_found || 0;
+    const processed = status.files_processed || 0;
+    document.getElementById('statTotal').textContent = total.toLocaleString();
+    document.getElementById('statProcessed').textContent = processed.toLocaleString();
+    
+    // Arc
+    const progress = status.phase_progress || {};
+    const overall = Object.values(progress).reduce((a,b)=>a+b,0)/6;
+    const pct = Math.round(overall);
+    document.getElementById('arcFill').style.strokeDashoffset = 226 - (226 * pct / 100);
+    document.getElementById('arcPercent').textContent = pct + '%';
+    
+    // Timeline
+    const phases = ['discovery','extract','geocode','sort','validate','done'];
+    const currentPhase = status.phase || 'discovery';
+    phases.forEach(phase=>{
+      const node = document.querySelector(`.node[data-phase="${phase}"]`);
+      const phasePct = progress[phase] || 0;
+      node.classList.remove('done','active');
+      if (phasePct >= 100) { node.classList.add('done'); node.querySelector('.node-circle').textContent = '✓'; }
+      else if (phase === currentPhase) { node.classList.add('active'); }
+    });
+    
+    // Map
+    const gps = await fetch(API + '/api/v1/gps').then(r=>r.json());
+    if (map) {
+      map.eachLayer(l=>{if(l._url===undefined)map.removeLayer(l);});
+      if (!window.mapMarkers) window.mapMarkers = [];
+      window.mapMarkers.forEach(m=>map.removeLayer(m));
+      window.mapMarkers = [];
+      (gps.coords||[]).slice(0,200).forEach(c=>{
+        const marker = L.circleMarker([c.lat,c.lng],{radius:5,fillColor:'#ff6b6b',color:'#fff',weight:1,fillOpacity:0.7});
+        marker.on('click',async()=>{try{const photo=await fetch(API+'/api/v1/photo/'+c.id).then(r=>r.json());showPhotoPopup(photo);}catch(e){}});
+        marker.addTo(map);window.mapMarkers.push(marker);
+      });
+    }
+  } catch(e) { console.log('Error:',e); }
+}
+
+function showPhotoPopup(photo) {
+  let popup = document.getElementById('photoPopup');
+  if(!popup) {
+    popup = document.createElement('div');
+    popup.id = 'photoPopup';
+    popup.className = 'photo-popup';
+    popup.innerHTML = `<div class="photo-popup-content"><button class="photo-popup-close" onclick="closePhotoPopup()">✕</button><div class="photo-popup-img" id="photoImg"></div><div class="photo-popup-info" id="photoInfo"></div><a class="photo-popup-link" id="photoLink" target="_blank">Open in Drive</a></div>`;
+    document.body.appendChild(popup);
+    popup.addEventListener('click',(e)=>{if(e.target===popup)closePhotoPopup();});
+  }
+  const img = document.getElementById('photoImg');
+  const info = document.getElementById('photoInfo');
+  const link = document.getElementById('photoLink');
+  if(photo.thumbnail) img.innerHTML = `<img src="${photo.thumbnail}" alt="${photo.name}" onerror="this.style.display='none'">`;
+  else img.innerHTML = '<div class="photo-no-img">📷</div>';
+  const size = photo.size ? (photo.size/1024/1024).toFixed(1)+' MB' : 'Unknown';
+  info.innerHTML = `<div class="photo-name">${photo.name}</div><div class="photo-meta">${photo.date||'No date'} • ${size}</div><div class="photo-meta">📍 ${photo.lat?.toFixed(4)}, ${photo.lng?.toFixed(4)}</div><div class="photo-meta">Zone: ${photo.zone||'Unknown'}</div>`;
+  link.href = photo.drive_url;
+  popup.classList.add('active');
+}
+function closePhotoPopup() { document.getElementById('photoPopup')?.classList.remove('active'); }
+
+init();
+</script>
+</body>
+</html>
