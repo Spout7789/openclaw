@@ -1,0 +1,9 @@
+backups/
+.env
+*.log
+*.db
+.vscode/
+__pycache__/
+*.pyc
+projects/*/.venv/
+logs/
